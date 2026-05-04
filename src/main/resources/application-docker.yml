@@ -1,0 +1,6 @@
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://timescaledb:5432/${DB_NAME:telemetry}
+  sql:
+    init:
+      mode: always

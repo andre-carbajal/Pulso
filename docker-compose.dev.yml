@@ -1,0 +1,34 @@
+services:
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: telemetry-db-dev
+    environment:
+      POSTGRES_DB: telemetry
+      POSTGRES_USER: telemetry
+      POSTGRES_PASSWORD: telemetry
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale-dev-data:/var/lib/postgresql/data
+
+  backend:
+    image: eclipse-temurin:25-jdk
+    container_name: pulso-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ./gradlew bootRun
+    environment:
+      DB_HOST: timescaledb
+      DB_USER: telemetry
+      DB_PASS: telemetry
+      DB_NAME: telemetry
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8080:8080"
+    depends_on:
+      - timescaledb
+
+volumes:
+  timescale-dev-data:

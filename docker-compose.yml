@@ -1,0 +1,53 @@
+services:
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: telemetry-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-telemetry}
+      POSTGRES_USER: ${DB_USER:-telemetry}
+      POSTGRES_PASSWORD: ${DB_PASS:-telemetry}
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-telemetry}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - telemetry-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pulso
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-telemetry}
+      DB_USER: ${DB_USER:-telemetry}
+      DB_PASS: ${DB_PASS:-telemetry}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    networks:
+      - telemetry-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  timescale-data:
+
+networks:
+  telemetry-net:
+    driver: bridge
