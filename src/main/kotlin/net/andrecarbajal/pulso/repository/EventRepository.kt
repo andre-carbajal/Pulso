@@ -6,6 +6,7 @@ import net.andrecarbajal.pulso.model.OsStat
 import net.andrecarbajal.pulso.model.TelemetryEvent
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
+import java.time.Instant
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -56,4 +57,110 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
     """
     )
     fun byOs(): Flux<OsStat>
+
+    @Query(
+        """
+        SELECT
+          feature,
+          COUNT(*) AS calls,
+          AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL) AS avg_duration_ms,
+          PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms)
+            FILTER (WHERE duration_ms IS NOT NULL) AS p95_duration_ms,
+          COUNT(*) FILTER (WHERE error_type IS NOT NULL)::float / COUNT(*) AS error_rate,
+          COUNT(DISTINCT session_id) AS unique_sessions,
+          COUNT(duration_ms) AS duration_samples
+        FROM events
+        WHERE
+          event_type = 'feature_used'
+          AND feature IS NOT NULL
+          AND time > NOW() - CAST(:range AS interval)
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY feature
+        ORDER BY calls DESC
+    """
+    )
+    fun featureStatsBase(appId: String?, range: String): Flux<FeatureStatsBaseRow>
+
+    @Query(
+        """
+        SELECT
+          feature,
+          time_bucket(CAST(:bucketSize AS interval), time) AS bucket,
+          COUNT(*) AS calls
+        FROM events
+        WHERE
+          event_type = 'feature_used'
+          AND feature IS NOT NULL
+          AND time > NOW() - CAST(:range AS interval)
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY feature, bucket
+        ORDER BY feature, bucket
+    """
+    )
+    fun featureStatsBuckets(appId: String?, range: String, bucketSize: String): Flux<FeatureBucketRow>
+
+    @Query(
+        """
+        WITH current_period AS (
+          SELECT feature, COUNT(*) AS calls
+          FROM events
+          WHERE
+            event_type = 'feature_used'
+            AND feature IS NOT NULL
+            AND time > NOW() - CAST(:range AS interval)
+            AND (:appId IS NULL OR app_id = :appId)
+          GROUP BY feature
+        ),
+        previous_period AS (
+          SELECT feature, COUNT(*) AS calls
+          FROM events
+          WHERE
+            event_type = 'feature_used'
+            AND feature IS NOT NULL
+            AND time BETWEEN NOW() - (CAST(:range AS interval) * 2) AND NOW() - CAST(:range AS interval)
+            AND (:appId IS NULL OR app_id = :appId)
+          GROUP BY feature
+        )
+        SELECT
+          c.feature,
+          ROUND((c.calls - COALESCE(p.calls, 0))::numeric / NULLIF(p.calls, 0) * 100, 1) AS trend_pct
+        FROM current_period c
+        LEFT JOIN previous_period p USING (feature)
+    """
+    )
+    fun featureStatsTrend(appId: String?, range: String): Flux<FeatureTrendRow>
+
+    @Query(
+        """
+        SELECT COUNT(DISTINCT feature)
+        FROM events
+        WHERE
+          event_type = 'feature_used'
+          AND feature IS NOT NULL
+          AND time > NOW() - CAST(:range AS interval)
+          AND (:appId IS NULL OR app_id = :appId)
+    """
+    )
+    fun featureDistinctTotal(appId: String?, range: String): Mono<Long>
+}
+
+interface FeatureStatsBaseRow {
+    val feature: String
+    val calls: Long
+    val avgDurationMs: Double?
+    val p95DurationMs: Double?
+    val errorRate: Double
+    val uniqueSessions: Long
+    val durationSamples: Long
+}
+
+interface FeatureBucketRow {
+    val feature: String
+    val bucket: Instant
+    val calls: Long
+}
+
+interface FeatureTrendRow {
+    val feature: String
+    val trendPct: Double?
 }

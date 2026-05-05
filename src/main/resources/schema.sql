@@ -21,3 +21,4 @@ SELECT create_hypertable('events', 'time', if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_events_app_id ON events (app_id, time DESC);
 CREATE INDEX IF NOT EXISTS idx_events_event_type ON events (event_type, time DESC);
 CREATE INDEX IF NOT EXISTS idx_events_feature ON events (feature, time DESC) WHERE feature IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_events_feature_time ON events (app_id, event_type, feature, time DESC);

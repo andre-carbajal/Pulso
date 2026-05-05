@@ -17,6 +17,7 @@ class AppRouter(
     fun routes(): RouterFunction<ServerResponse> = router {
         POST("/ingest", ingestHandler::handle)
         GET("/metrics", metricsHandler::metrics)
+        GET("/feature-stats", metricsHandler::featureStats)
         GET("/health", metricsHandler::health)
     }
 }
