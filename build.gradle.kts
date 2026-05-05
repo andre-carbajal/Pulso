@@ -5,7 +5,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 plugins {
     id("org.springframework.boot") version "3.5.14"
     id("io.spring.dependency-management") version "1.1.5"
-    id("org.graalvm.buildtools.native") version "0.11.5"
     kotlin("jvm") version "2.3.21"
     kotlin("plugin.spring") version "2.3.21"
 }
@@ -53,21 +52,4 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-}
-
-graalvmNative {
-    binaries {
-        named("main") {
-            imageName.set("pulso")
-            mainClass.set("net.andrecarbajal.pulso.TelemetryApplicationKt")
-            buildArgs.addAll(
-                "--no-fallback",
-                "-H:+ReportExceptionStackTraces",
-                "--enable-url-protocols=http,https",
-                "--parallelism=4",
-                "-J-Xmx4g"
-            )
-        }
-    }
-    toolchainDetection.set(false)
 }
