@@ -1,7 +1,5 @@
 FROM ghcr.io/graalvm/native-image-community:25 AS builder
 
-RUN microdnf install -y curl ca-certificates findutils && microdnf clean all
-
 WORKDIR /build
 
 COPY gradlew .

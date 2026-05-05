@@ -26,7 +26,10 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:r2dbc-postgresql:1.1.1.RELEASE")
+    runtimeOnly("org.postgresql:postgresql")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
@@ -60,7 +63,9 @@ graalvmNative {
             buildArgs.addAll(
                 "--no-fallback",
                 "-H:+ReportExceptionStackTraces",
-                "--enable-url-protocols=http,https"
+                "--enable-url-protocols=http,https",
+                "--parallelism=4",
+                "-J-Xmx4g"
             )
         }
     }

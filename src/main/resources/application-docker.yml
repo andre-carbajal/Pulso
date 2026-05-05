@@ -1,6 +1,10 @@
 spring:
   r2dbc:
     url: r2dbc:postgresql://timescaledb:5432/${DB_NAME:telemetry}
+  flyway:
+    url: jdbc:postgresql://timescaledb:5432/${DB_NAME:telemetry}
+    user: ${DB_USER:telemetry}
+    password: ${DB_PASS:telemetry}
   sql:
     init:
-      mode: always
+      mode: never

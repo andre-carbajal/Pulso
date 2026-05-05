@@ -67,10 +67,11 @@ class FeatureStatsService(
     private fun buildSummary(baseRows: List<FeatureStatsBaseRow>, totalDistinct: Int): FeatureSummary {
         val totalCalls = baseRows.sumOf { it.calls }
         val weightedDurationSum = baseRows.sumOf {
-            if (it.avgDurationMs == null || it.durationSamples <= 0) {
+            val avgDurationMs = it.avgDurationMs
+            if (avgDurationMs == null || it.durationSamples <= 0) {
                 0.0
             } else {
-                it.avgDurationMs * it.durationSamples
+                avgDurationMs * it.durationSamples
             }
         }
         val totalDurationSamples = baseRows.sumOf { it.durationSamples }
