@@ -6,6 +6,7 @@ Reactive backend to collect telemetry events, expose aggregated metrics, and str
 
 - Send telemetry events through `POST /ingest`.
 - Query aggregated metrics for the last 24 hours with `GET /metrics`.
+- Query feature analytics with `GET /feature-stats`.
 - Subscribe to live events through `ws://<host>/ws`.
 - Check service health with `GET /health`.
 
@@ -196,7 +197,75 @@ curl http://localhost:8080/health
 }
 ```
 
-### 4) Real-Time Stream - WebSocket `/ws`
+### 4) Feature Analytics - `GET /feature-stats`
+
+Returns aggregated usage stats by feature for a selected time range, optionally filtered by project (`appId`).
+
+#### Query params
+
+| Param | Type | Required | Default | Allowed values / example |
+|---|---|---:|---|---|
+| `appId` | string | No | `null` (all apps) | `desktop-client` |
+| `range` | string | No | `24h` | `1h`, `6h`, `24h`, `7d` |
+
+#### cURL
+
+```bash
+curl "http://localhost:8080/feature-stats?range=24h&appId=desktop-client"
+```
+
+#### Example response
+
+```json
+{
+  "range": "24h",
+  "appId": "desktop-client",
+  "summary": {
+    "totalCalls": 8241,
+    "avgDurationMs": 384.2,
+    "activeFeatures": 11,
+    "totalFeatures": 14
+  },
+  "features": [
+    {
+      "feature": "sync_notes",
+      "calls": 2340,
+      "avgDurationMs": 420.1,
+      "p95DurationMs": 980.0,
+      "errorRate": 0.004,
+      "uniqueSessions": 841,
+      "trendPct": 18.2,
+      "hourly": [20, 15, 18, 40, 85, 120, 140, 160, 155, 130, 100, 80]
+    }
+  ]
+}
+```
+
+#### Response semantics
+
+- `summary.totalCalls`: sum of all `feature_used` events in the selected range/filter.
+- `summary.avgDurationMs`: weighted average using only events with non-null `durationMs`.
+- `summary.activeFeatures`: features with at least one event in the selected range/filter.
+- `summary.totalFeatures`: distinct features in the selected range/filter.
+- `features[].errorRate`: `errors / calls` (0 to 1).
+- `features[].trendPct`: percent change vs previous period of same duration; can be `null` when previous period has zero calls.
+- `features[].hourly`: fixed-length time series:
+  - `1h`: 12 points (5-minute buckets)
+  - `6h`: 12 points (30-minute buckets)
+  - `24h`: 12 points (2-hour buckets)
+  - `7d`: 7 points (1-day buckets)
+
+#### Error response
+
+- `400 Bad Request` for invalid `range`:
+
+```json
+{
+  "error": "Invalid range '2h'. Allowed values: 1h, 6h, 24h, 7d"
+}
+```
+
+### 5) Real-Time Stream - WebSocket `/ws`
 
 Connect a WebSocket client to:
 
@@ -248,7 +317,8 @@ Spring Actuator exposes:
 
 ## Database Initialization
 
-On startup, Spring executes `src/main/resources/schema.sql` to:
+Database initialization runs through Flyway migrations from `classpath:db/migration`.
+The current base migration is `src/main/resources/db/migration/V1__init_events_schema.sql`, which creates:
 
 - Create the `timescaledb` extension (if missing).
 - Create the `events` table.
