@@ -3,6 +3,7 @@ package net.andrecarbajal.pulso.repository
 import net.andrecarbajal.pulso.model.ErrorStat
 import net.andrecarbajal.pulso.model.FeatureStat
 import net.andrecarbajal.pulso.model.OsStat
+import net.andrecarbajal.pulso.model.ProjectSummary
 import net.andrecarbajal.pulso.model.TelemetryEvent
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
@@ -22,6 +23,15 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
 
     @Query(
         """
+        SELECT count(*) FROM events
+        WHERE time > NOW() - INTERVAL '24 hours'
+          AND (:appId IS NULL OR app_id = :appId)
+    """
+    )
+    fun countLast24h(appId: String?): Mono<Long>
+
+    @Query(
+        """
         SELECT feature, count(*) as total
         FROM events
         WHERE event_type = 'feature_used'
@@ -33,6 +43,21 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
     """
     )
     fun topFeatures(): Flux<FeatureStat>
+
+    @Query(
+        """
+        SELECT feature, count(*) as total
+        FROM events
+        WHERE event_type = 'feature_used'
+          AND time > NOW() - INTERVAL '24 hours'
+          AND feature IS NOT NULL
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY feature
+        ORDER BY total DESC
+        LIMIT 10
+    """
+    )
+    fun topFeatures(appId: String?): Flux<FeatureStat>
 
     @Query(
         """
@@ -49,6 +74,20 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
 
     @Query(
         """
+        SELECT error_type, count(*) as total
+        FROM events
+        WHERE event_type = 'error'
+          AND time > NOW() - INTERVAL '24 hours'
+          AND error_type IS NOT NULL
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY error_type
+        ORDER BY total DESC
+    """
+    )
+    fun errorStats(appId: String?): Flux<ErrorStat>
+
+    @Query(
+        """
         SELECT os, count(*) as total
         FROM events
         WHERE time > NOW() - INTERVAL '24 hours'
@@ -57,6 +96,28 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
     """
     )
     fun byOs(): Flux<OsStat>
+
+    @Query(
+        """
+        SELECT os, count(*) as total
+        FROM events
+        WHERE time > NOW() - INTERVAL '24 hours'
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY os
+        ORDER BY total DESC
+    """
+    )
+    fun byOs(appId: String?): Flux<OsStat>
+
+    @Query(
+        """
+        SELECT app_id AS appId, count(*) AS total
+        FROM events
+        GROUP BY app_id
+        ORDER BY total DESC, app_id ASC
+    """
+    )
+    fun projectSummaries(): Flux<ProjectSummary>
 
     @Query(
         """

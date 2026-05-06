@@ -16,7 +16,11 @@ class MetricsHandler(
     private val featureStatsService: FeatureStatsService
 ) {
     fun metrics(req: ServerRequest): Mono<ServerResponse> =
-        service.metrics()
+        service.metrics(req.queryParam("appId").orElse(null))
+            .flatMap { ServerResponse.ok().bodyValue(it) }
+
+    fun projects(req: ServerRequest): Mono<ServerResponse> =
+        service.projects()
             .flatMap { ServerResponse.ok().bodyValue(it) }
 
     fun health(req: ServerRequest): Mono<ServerResponse> =

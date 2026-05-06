@@ -2,6 +2,7 @@ package net.andrecarbajal.pulso.service
 
 import net.andrecarbajal.pulso.model.IngestRequest
 import net.andrecarbajal.pulso.model.MetricsResult
+import net.andrecarbajal.pulso.model.ProjectSummary
 import net.andrecarbajal.pulso.model.toEvent
 import net.andrecarbajal.pulso.repository.EventRepository
 import org.springframework.stereotype.Service
@@ -19,11 +20,11 @@ class EventService(
             .then()
     }
 
-    fun metrics(): Mono<MetricsResult> = Mono.zip(
-        repository.countLast24h(),
-        repository.topFeatures().collectList(),
-        repository.errorStats().collectList(),
-        repository.byOs().collectList()
+    fun metrics(appId: String?): Mono<MetricsResult> = Mono.zip(
+        repository.countLast24h(appId),
+        repository.topFeatures(appId).collectList(),
+        repository.errorStats(appId).collectList(),
+        repository.byOs(appId).collectList()
     ).map { t ->
         MetricsResult(
             executions24h = t.t1,
@@ -32,4 +33,6 @@ class EventService(
             byOs = t.t4
         )
     }
+
+    fun projects(): Mono<List<ProjectSummary>> = repository.projectSummaries().collectList()
 }

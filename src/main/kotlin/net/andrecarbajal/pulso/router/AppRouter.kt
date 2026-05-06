@@ -16,6 +16,7 @@ class AppRouter(
     @Bean
     fun routes(): RouterFunction<ServerResponse> = router {
         POST("/ingest", ingestHandler::handle)
+        GET("/projects", metricsHandler::projects)
         GET("/metrics", metricsHandler::metrics)
         GET("/feature-stats", metricsHandler::featureStats)
         GET("/health", metricsHandler::health)
