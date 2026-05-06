@@ -111,8 +111,9 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
 
     @Query(
         """
-        SELECT app_id AS appId, count(*) AS total
+        SELECT app_id, count(*) AS total
         FROM events
+        WHERE app_id IS NOT NULL
         GROUP BY app_id
         ORDER BY total DESC, app_id ASC
     """
@@ -152,6 +153,7 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
         WHERE
           event_type = 'feature_used'
           AND feature IS NOT NULL
+          AND time IS NOT NULL
           AND time > NOW() - CAST(:range AS interval)
           AND (:appId IS NULL OR app_id = :appId)
         GROUP BY feature, bucket
@@ -207,18 +209,18 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
 
 interface FeatureStatsBaseRow {
     val feature: String
-    val calls: Long
+    val calls: Long?
     val avgDurationMs: Double?
     val p95DurationMs: Double?
-    val errorRate: Double
-    val uniqueSessions: Long
-    val durationSamples: Long
+    val errorRate: Double?
+    val uniqueSessions: Long?
+    val durationSamples: Long?
 }
 
 interface FeatureBucketRow {
-    val feature: String
-    val bucket: Instant
-    val calls: Long
+    val feature: String?
+    val bucket: Instant?
+    val calls: Long?
 }
 
 interface FeatureTrendRow {

@@ -32,11 +32,13 @@ class FeatureStatsService(
                 val trendByFeature = trendRows.associate { it.feature to it.trendPct }
 
                 val sortedBucketCountsByFeature = bucketRows
+                    .asSequence()
+                    .filter { it.feature != null && it.bucket != null }
                     .groupBy { it.feature }
                     .mapValues { entry ->
                         entry.value
-                            .sortedBy { it.bucket }
-                            .map { it.calls }
+                            .sortedBy { it.bucket!! }
+                            .map { it.calls ?: 0L }
                     }
 
                 val features = baseRows.map { row ->
@@ -45,11 +47,11 @@ class FeatureStatsService(
 
                     FeatureAnalyticsStat(
                         feature = row.feature,
-                        calls = row.calls,
+                        calls = row.calls ?: 0L,
                         avgDurationMs = row.avgDurationMs,
                         p95DurationMs = row.p95DurationMs,
-                        errorRate = row.errorRate,
-                        uniqueSessions = row.uniqueSessions,
+                        errorRate = row.errorRate ?: 0.0,
+                        uniqueSessions = row.uniqueSessions ?: 0L,
                         trendPct = trendByFeature[row.feature],
                         hourly = paddedSeries
                     )
@@ -65,16 +67,17 @@ class FeatureStatsService(
     }
 
     private fun buildSummary(baseRows: List<FeatureStatsBaseRow>, totalDistinct: Int): FeatureSummary {
-        val totalCalls = baseRows.sumOf { it.calls }
+        val totalCalls = baseRows.sumOf { it.calls ?: 0L }
         val weightedDurationSum = baseRows.sumOf {
             val avgDurationMs = it.avgDurationMs
-            if (avgDurationMs == null || it.durationSamples <= 0) {
+            val durationSamples = it.durationSamples ?: 0L
+            if (avgDurationMs == null || durationSamples <= 0) {
                 0.0
             } else {
-                avgDurationMs * it.durationSamples
+                avgDurationMs * durationSamples
             }
         }
-        val totalDurationSamples = baseRows.sumOf { it.durationSamples }
+        val totalDurationSamples = baseRows.sumOf { it.durationSamples ?: 0L }
         val avgDurationMs = if (totalDurationSamples > 0) {
             weightedDurationSum / totalDurationSamples
         } else {
@@ -84,7 +87,7 @@ class FeatureStatsService(
         return FeatureSummary(
             totalCalls = totalCalls,
             avgDurationMs = avgDurationMs,
-            activeFeatures = baseRows.count { it.calls > 0 },
+            activeFeatures = baseRows.count { (it.calls ?: 0L) > 0 },
             totalFeatures = totalDistinct
         )
     }
