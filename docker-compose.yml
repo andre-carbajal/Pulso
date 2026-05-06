@@ -35,15 +35,11 @@ services:
       DB_USER: ${DB_USER:-telemetry}
       DB_PASS: ${DB_PASS:-telemetry}
       PORT: 8080
+      JAVA_OPTS: "-Xms128m -Xmx1g"
     ports:
       - "8080:8080"
     networks:
       - telemetry-net
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
 
 volumes:
   timescale-data:
