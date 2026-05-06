@@ -1,6 +1,7 @@
 # Pulso Backend (Telemetry API)
 
-Reactive backend to collect telemetry events, expose aggregated metrics, and stream new events in real time via WebSocket.
+Reactive backend to collect telemetry events, expose aggregated metrics, and stream new events in real time via
+WebSocket.
 
 ## What You Can Do With This Service
 
@@ -46,6 +47,13 @@ cp .env.example .env
 - `DB_USER` (default: `telemetry`)
 - `DB_PASS` (default: `telemetry`)
 - `PORT` (default: `8080`)
+- `CORS_ALLOWED_ORIGINS` (default: `http://localhost:4173`) - comma-separated origins allowed to call the API from
+  browsers.
+
+3. CORS origin examples:
+
+- Single origin: `CORS_ALLOWED_ORIGINS=http://localhost:4173`
+- Multiple origins: `CORS_ALLOWED_ORIGINS=http://localhost:4173,http://localhost:3000`
 
 ## Run the Project
 
@@ -136,13 +144,19 @@ curl -X POST http://localhost:8080/ingest \
 - `202 Accepted`
 
 ```json
-{ "status": "accepted" }
+{
+  "status": "accepted"
+}
 ```
 
 - `400 Bad Request` (validation)
 
 ```json
-{ "errors": ["appId: must not be blank"] }
+{
+  "errors": [
+    "appId: must not be blank"
+  ]
+}
 ```
 
 ### 2) Query Metrics - `GET /metrics`
@@ -166,14 +180,26 @@ curl http://localhost:8080/metrics
 {
   "executions24h": 1280,
   "topFeatures": [
-    { "feature": "sync_notes", "total": 320 }
+    {
+      "feature": "sync_notes",
+      "total": 320
+    }
   ],
   "errors": [
-    { "errorType": "TimeoutError", "total": 12 }
+    {
+      "errorType": "TimeoutError",
+      "total": 12
+    }
   ],
   "byOs": [
-    { "os": "macOS", "total": 700 },
-    { "os": "Windows", "total": 580 }
+    {
+      "os": "macOS",
+      "total": 700
+    },
+    {
+      "os": "Windows",
+      "total": 580
+    }
   ]
 }
 ```
@@ -203,10 +229,10 @@ Returns aggregated usage stats by feature for a selected time range, optionally 
 
 #### Query params
 
-| Param | Type | Required | Default | Allowed values / example |
-|---|---|---:|---|---|
-| `appId` | string | No | `null` (all apps) | `desktop-client` |
-| `range` | string | No | `24h` | `1h`, `6h`, `24h`, `7d` |
+| Param   | Type   | Required | Default           | Allowed values / example |
+|---------|--------|---------:|-------------------|--------------------------|
+| `appId` | string |       No | `null` (all apps) | `desktop-client`         |
+| `range` | string |       No | `24h`             | `1h`, `6h`, `24h`, `7d`  |
 
 #### cURL
 
@@ -235,7 +261,20 @@ curl "http://localhost:8080/feature-stats?range=24h&appId=desktop-client"
       "errorRate": 0.004,
       "uniqueSessions": 841,
       "trendPct": 18.2,
-      "hourly": [20, 15, 18, 40, 85, 120, 140, 160, 155, 130, 100, 80]
+      "hourly": [
+        20,
+        15,
+        18,
+        40,
+        85,
+        120,
+        140,
+        160,
+        155,
+        130,
+        100,
+        80
+      ]
     }
   ]
 }
@@ -248,12 +287,13 @@ curl "http://localhost:8080/feature-stats?range=24h&appId=desktop-client"
 - `summary.activeFeatures`: features with at least one event in the selected range/filter.
 - `summary.totalFeatures`: distinct features in the selected range/filter.
 - `features[].errorRate`: `errors / calls` (0 to 1).
-- `features[].trendPct`: percent change vs previous period of same duration; can be `null` when previous period has zero calls.
+- `features[].trendPct`: percent change vs previous period of same duration; can be `null` when previous period has zero
+  calls.
 - `features[].hourly`: fixed-length time series:
-  - `1h`: 12 points (5-minute buckets)
-  - `6h`: 12 points (30-minute buckets)
-  - `24h`: 12 points (2-hour buckets)
-  - `7d`: 7 points (1-day buckets)
+    - `1h`: 12 points (5-minute buckets)
+    - `6h`: 12 points (30-minute buckets)
+    - `24h`: 12 points (2-hour buckets)
+    - `7d`: 7 points (1-day buckets)
 
 #### Error response
 
