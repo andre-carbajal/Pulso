@@ -111,6 +111,77 @@ interface EventRepository : ReactiveCrudRepository<TelemetryEvent, Long> {
 
     @Query(
         """
+        SELECT COALESCE(arch, 'unknown') as arch, count(*) as total
+        FROM events
+        WHERE time > NOW() - INTERVAL '24 hours'
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY COALESCE(arch, 'unknown')
+        ORDER BY total DESC
+    """
+    )
+    fun byArch(appId: String?): Flux<ArchRow>
+
+    @Query(
+        """
+        SELECT event_type, count(*) as total
+        FROM events
+        WHERE time > NOW() - INTERVAL '24 hours'
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY event_type
+        ORDER BY total DESC
+    """
+    )
+    fun byEventType(appId: String?): Flux<EventTypeRow>
+
+    @Query(
+        """
+        SELECT app_version, count(*) as total
+        FROM events
+        WHERE time > NOW() - INTERVAL '24 hours'
+          AND (:appId IS NULL OR app_id = :appId)
+        GROUP BY app_version
+        ORDER BY total DESC
+        LIMIT 10
+    """
+    )
+    fun byAppVersion(appId: String?): Flux<AppVersionRow>
+
+    @Query(
+        """
+        SELECT COUNT(DISTINCT session_id)
+        FROM events
+        WHERE time > NOW() - INTERVAL '24 hours'
+          AND (:appId IS NULL OR app_id = :appId)
+    """
+    )
+    fun sessions24h(appId: String?): Mono<Long>
+
+    @Query(
+        """
+        SELECT
+          time,
+          app_id,
+          app_version,
+          os,
+          arch,
+          feature,
+          error_type,
+          error_message,
+          session_id
+        FROM events
+        WHERE
+          event_type = 'error'
+          AND time > NOW() - INTERVAL '24 hours'
+          AND error_type IS NOT NULL
+          AND (:appId IS NULL OR app_id = :appId)
+        ORDER BY time DESC
+        LIMIT 20
+    """
+    )
+    fun recentErrors(appId: String?): Flux<RecentErrorRow>
+
+    @Query(
+        """
         SELECT app_id, count(*) AS total
         FROM events
         WHERE app_id IS NOT NULL
@@ -226,4 +297,31 @@ interface FeatureBucketRow {
 interface FeatureTrendRow {
     val feature: String
     val trendPct: Double?
+}
+
+interface ArchRow {
+    val arch: String
+    val total: Long?
+}
+
+interface EventTypeRow {
+    val eventType: String
+    val total: Long?
+}
+
+interface AppVersionRow {
+    val appVersion: String
+    val total: Long?
+}
+
+interface RecentErrorRow {
+    val time: Instant?
+    val appId: String
+    val appVersion: String
+    val os: String
+    val arch: String?
+    val feature: String?
+    val errorType: String
+    val errorMessage: String?
+    val sessionId: String
 }
